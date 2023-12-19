@@ -1,4 +1,4 @@
-﻿/*
+/*
     GyverOLED - лёгкая и быстрая библиотека для OLED дисплея
     Документация: 
     GitHub: https://github.com/GyverLibs/GyverOLED
@@ -213,6 +213,13 @@ public:
         
         setCursorXY(0, 0);
         if (_BUFF) setWindow(0, 0, _maxX, _maxRow);        // для буфера включаем всю область
+    }
+    
+    //with instanciated TwoWire class
+    void init(TwoWire &wirePort) {
+      _wirePort = &wirePort;
+      _useInstanciatedWire = true;
+
     }
     
     // очистить дисплей
@@ -884,8 +891,14 @@ public:
 #endif
     }
     void sendByteRaw(uint8_t data) {
-        if (_CONN) SPI.transfer(data);
-        else Wire.write(data);
+        if (_CONN) {
+          SPI.transfer(data);
+        } else if (_useInstanciatedWire == false) {
+          Wire.write(data);
+        } else {
+          _wirePort->write(data);
+        }
+
     }
 
     
@@ -938,9 +951,12 @@ public:
         if (_CONN) {
             fastWrite(_CS, 1);
             SPI.endTransaction();
-        } else {
+        } else if (_useInstanciatedWire == false) {
             Wire.endTransmission();
             _writes = 0;
+        } else {
+          _wirePort->endTransmission();
+          _writes = 0;
         }
     }
 
@@ -948,7 +964,12 @@ public:
         if (_CONN) {
             SPI.beginTransaction(OLED_SPI_SETT);
             fastWrite(_CS, 0);
-        } else Wire.beginTransmission(_address);
+        } else if (_useInstanciatedWire == false) {
+          Wire.beginTransmission(_address);
+        } 
+        else {
+          _wirePort->beginTransmission(_address);
+        }
     }
 
 
@@ -1018,6 +1039,8 @@ private:
     int _bufsizeX, _bufsizeY;
     int _bufX, _bufY;
     uint8_t *_buf_ptr;
-    bool _buf_flag = false;    
+    bool _buf_flag = false;
+    TwoWire *_wirePort = 0 ; 
+    bool _useInstanciatedWire = 0;
 };
 #endif
